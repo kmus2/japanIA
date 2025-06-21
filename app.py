@@ -108,11 +108,17 @@ with st.sidebar:
     st.title("⚙️ " + T["sidebar_title"])
 
     lang_options = {"en": "English", "ja": "日本語"}
+    
+    # Determine the index of the current language for the radio button
+    current_lang_index = list(lang_options.keys()).index(st.session_state.lang)
+
     selected_lang_key = st.radio(
         T["language_label"],
-        options=lang_options.keys(),
+        options=list(lang_options.keys()),
         format_func=lambda key: lang_options[key],
         horizontal=True,
+        key="language_toggle",  # Add a stable key to preserve state
+        index=current_lang_index # Set index to sync with session state
     )
 
     if selected_lang_key != st.session_state.lang:
