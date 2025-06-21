@@ -7,10 +7,59 @@ import matplotlib.pyplot as plt
 # Import the Generator from model.py
 from model import Generator
 
+# --- Translations ---
+TRANSLATIONS = {
+    "en": {
+        "page_title": "Handwritten Digit Generator",
+        "sidebar_title": "Controls",
+        "language_label": "Language",
+        "header": "Handwritten Digit Generator",
+        "subheader": "Generate synthetic MNIST-like images with a Conditional GAN model.",
+        "usage_header": "How to use this app",
+        "usage_body": "First, train the model by running the `train.py` script (preferably in Google Colab with a GPU). Then, place the resulting `generator.pth` file in the same directory as this app. Finally, select a digit and click the generate button!",
+        "model_not_found": "Model not found.",
+        "model_not_found_body": "Please make sure the trained model file (`generator.pth`) is in the same directory as the app.",
+        "model_loaded": "Model loaded successfully.",
+        "model_loaded_body": "Ready to generate digits.",
+        "choose_digit_label": "Choose a digit to generate:",
+        "generate_button": "Generate Images",
+        "generating_info": "Generating images for digit",
+        "generated_header": "Generated images of digit: {digit}",
+        "sample_caption": "Sample {i}",
+        "error_generating": "Could not generate images. Is the model loaded correctly?",
+    },
+    "ja": {
+        "page_title": "手書き数字ジェネレーター",
+        "sidebar_title": "コントロール",
+        "language_label": "言語",
+        "header": "手書き数字画像ジェネレーター",
+        "subheader": "条件付きGANモデルで手書き数字の画像を生成します。",
+        "usage_header": "このアプリの使い方",
+        "usage_body": "まず、`train.py`スクリプトを実行してモデルをトレーニングします（GPUを備えたGoogle Colabを推奨）。次に、生成された`generator.pth`ファイルをこのアプリと同じディレクトリに配置します。最後に、数字を選択して生成ボタンをクリックしてください！",
+        "model_not_found": "モデルが見つかりません。",
+        "model_not_found_body": "訓練済みのモデルファイル (`generator.pth`) がアプリと同じディレクトリにあることを確認してください。",
+        "model_loaded": "モデルは正常にロードされました。",
+        "model_loaded_body": "数字を生成する準備ができました。",
+        "choose_digit_label": "生成する数字を選択してください:",
+        "generate_button": "画像を生成",
+        "generating_info": "数字の画像を生成しています",
+        "generated_header": "生成された数字の画像: {digit}",
+        "sample_caption": "サンプル {i}",
+        "error_generating": "画像を生成できませんでした。モデルは正しく読み込まれていますか？",
+    },
+}
+
+# --- Session State Initialization ---
+if 'lang' not in st.session_state:
+    st.session_state.lang = 'en'
+
+T = TRANSLATIONS[st.session_state.lang]
+
 # --- App Configuration ---
 st.set_page_config(
-    page_title="Handwritten Digit Generator",
-    layout="wide"
+    page_title=T["page_title"],
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # --- Model Loading ---
@@ -53,39 +102,66 @@ def generate_images(digit, num_images=5):
     return generated_imgs
 
 # --- UI Layout ---
-st.title("Handwritten Digit Image Generator")
-st.write("Generate synthetic MNIST-like images using your trained model. First, train the model using the `train.py` script in Google Colab, then place the `generator.pth` file here and run the app.")
+
+# Sidebar
+with st.sidebar:
+    st.title("⚙️ " + T["sidebar_title"])
+
+    lang_options = {"en": "English", "ja": "日本語"}
+    selected_lang_key = st.radio(
+        T["language_label"],
+        options=lang_options.keys(),
+        format_func=lambda key: lang_options[key],
+        horizontal=True,
+    )
+
+    if selected_lang_key != st.session_state.lang:
+        st.session_state.lang = selected_lang_key
+        st.rerun()
+    
+    st.markdown("---")
+
+    digit_to_generate = st.selectbox(
+        label=T["choose_digit_label"],
+        options=list(range(10)),
+        index=7 # Default to 7
+    )
+
+    generate_button = st.button(
+        label=T["generate_button"],
+        type="primary",
+        use_container_width=True
+    )
+
+# Main Page
+st.title("✨ " + T["header"])
+st.markdown(f"*{T['subheader']}*")
+
+with st.expander(T["usage_header"]):
+    st.write(T["usage_body"])
 
 if generator is None:
-    st.error(f"**Model not found.** Please make sure the trained model file (`{MODEL_PATH}`) is in the same directory as the app.")
+    st.error(f"**{T['model_not_found']}** {T['model_not_found_body']}", icon="❌")
 else:
-    st.success("**Model loaded successfully.** Ready to generate digits.")
-
-    st.header("Generate Images")
-    
-    col1, col2 = st.columns([1, 3])
-
-    with col1:
-        # User input: select a digit
-        digit_to_generate = st.selectbox(
-            label="Choose a digit to generate (0-9):",
-            options=list(range(10))
-        )
-
-        # Generate button
-        generate_button = st.button("Generate Images", type="primary")
+    st.success(f"**{T['model_loaded']}** {T['model_loaded_body']}", icon="✅")
 
     if generate_button:
-        st.header(f"Generated images of digit: {digit_to_generate}")
+        st.header(T["generated_header"].format(digit=digit_to_generate), anchor=False)
         
-        # Generate and display images
-        images = generate_images(digit_to_generate, num_images=5)
+        with st.spinner(f"{T['generating_info']} **{digit_to_generate}**..."):
+            images = generate_images(digit_to_generate, num_images=5)
         
         if images is not None:
-            # Display the 5 images horizontally
             cols = st.columns(5)
             for i, image_np in enumerate(images):
                 with cols[i]:
-                    st.image(image_np.squeeze(), caption=f"Sample {i+1}", use_column_width=True)
+                    st.image(
+                        image_np.squeeze(), 
+                        caption=T["sample_caption"].format(i=i + 1),
+                        use_container_width=True
+                    )
+            
+            # Fun animation on success
+            st.balloons()
         else:
-            st.error("Could not generate images. Is the model loaded correctly?") 
+            st.error(T["error_generating"], icon="🚨") 
